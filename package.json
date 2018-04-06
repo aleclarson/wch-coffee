@@ -2,9 +2,6 @@
   "name": "wch-coffee",
   "version": "0.0.1",
   "main": "js/index",
-  "plugins": [
-    "lotus-coffee"
-  ],
   "dependencies": {
     "fsx": "aleclarson/fsx#1.6.0",
     "semver": "^5.5.0",
@@ -14,5 +11,9 @@
   "devDependencies": {
     "coffeescript": "^2.2.3",
     "wch-coffee": "^0.0.1"
+  },
+  "scripts": {
+    "build": "coffee-build src -o js",
+    "prepublishOnly": "prepv -i"
   }
 }
