@@ -1,0 +1,18 @@
+{
+  "name": "wch-coffee",
+  "version": "0.0.1",
+  "main": "js/index",
+  "plugins": [
+    "lotus-coffee"
+  ],
+  "dependencies": {
+    "fsx": "aleclarson/fsx#1.6.0",
+    "semver": "^5.5.0",
+    "tar-install": "^0.0.1",
+    "tar-url": "^0.0.2"
+  },
+  "devDependencies": {
+    "coffeescript": "^2.2.3",
+    "wch-coffee": "^0.0.1"
+  }
+}
