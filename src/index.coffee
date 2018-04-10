@@ -92,7 +92,7 @@ transpile = (file, dest, coffee) ->
       message: err.message
       location: [
         [loc.first_line, loc.first_column]
-        [loc.last_line or loc.first_line, loc.last_column]
+        [loc.last_line or loc.first_line, loc.last_column + 1]
       ]
 
     if log.verbose
