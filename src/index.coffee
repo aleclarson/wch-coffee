@@ -28,7 +28,14 @@ exports.add = (root) ->
     exclude: ['__*__']
 
   stream.on 'data', (file) ->
-    transpile file.name, src, dest, coffee
+
+    if file.exists
+      transpile file, getDest(dest, file.name), coffee
+      return
+
+    # Remove the associated .js file
+    fs.removeFile getDest dest, file.name
+    return
 
   stream.on 'error', onError
   streams.set root, stream
@@ -64,35 +71,40 @@ log = (...args) ->
 log.verbose = !!process.env.VERBOSE
 huey.log log, !process.env.NO_COLOR
 
-transpile = (name, src, dest, coffee) ->
-  file = path.join src, name
-  if log.verbose
-    log.pale_yellow 'Transpiling:', file
+transpile = (file, dest, coffee) ->
 
-  input = fs.readFile file
-  try
-    output = coffee.compile input,
-      filename: file
-      header: true
-      bare: true
+  if log.verbose
+    log.pale_yellow 'Transpiling:', file.path
+
+  input = fs.readFile file.path
+  try output = coffee.compile input,
+    filename: file.path
+    header: true
+    bare: true
+
   catch err
-    {message, location} =err
-    location = [
-      [location.first_line, location.first_column]
-      [location.last_line or location.first_line, location.last_column]
-    ]
-    wch.emit 'compile:error', {file, message, location}
+    loc = err.location
+    wch.emit 'compile:error',
+      file: file.path
+      message: err.message
+      location: [
+        [loc.first_line, loc.first_column]
+        [loc.last_line or loc.first_line, loc.last_column]
+      ]
+
     if log.verbose
-      log.red 'Failed to compile:', file
-      log.gray error.stack
+      log.red 'Failed to compile:', file.path
+      log.gray err.stack
     return
 
-  dest = path.join dest, name.replace /\.coffee$/, '.js'
   fs.writeDir path.dirname dest
   fs.writeFile dest, output
 
-  wch.emit 'compile', {file, dest}
+  wch.emit 'compile', {file: file.path, dest}
   return
+
+getDest = (dir, name) ->
+  path.join dir, name.replace /\.coffee$/, '.js'
 
 getVersion = (deps) ->
 
