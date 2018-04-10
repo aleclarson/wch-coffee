@@ -97,7 +97,7 @@ transpile = (file, dest, coffee) ->
 
     if log.verbose
       log.red 'Failed to compile:', file.path
-      log.gray err.stack
+      log.gray err.message
     return
 
   fs.writeDir path.dirname dest
