@@ -73,7 +73,7 @@ log.verbose = !!process.env.VERBOSE
 huey.log log, !process.env.NO_COLOR
 
 transpile = (file, dest, coffee) ->
-  try mtime = fs.stat(dest).mtimeMs
+  try mtime = fs.stat(dest).mtime.getTime()
   return if mtime and mtime > file.mtime_ms
 
   if log.verbose
