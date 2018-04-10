@@ -24,6 +24,7 @@ exports.add = (root) ->
   dest = path.join root, path.dirname pack.main or 'js/index'
   stream = wch.stream src,
     clock: false
+    fields: ['name', 'exists', 'new', 'mtime_ms']
     include: ['**/*.coffee']
     exclude: ['__*__']
 
@@ -72,6 +73,8 @@ log.verbose = !!process.env.VERBOSE
 huey.log log, !process.env.NO_COLOR
 
 transpile = (file, dest, coffee) ->
+  try mtime = fs.stat(dest).mtimeMs
+  return if mtime and mtime > file.mtime_ms
 
   if log.verbose
     log.pale_yellow 'Transpiling:', file.path
