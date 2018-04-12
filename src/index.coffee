@@ -1,93 +1,69 @@
-tarInstall = require 'tar-install'
-tarUrl = require 'tar-url'
-semver = require 'semver'
-huey = require 'huey'
 path = require 'path'
 wch = require 'wch'
 fs = require 'fsx'
-os = require 'os'
 
-exports.run = ->
-  if fs.isDir INSTALL_DIR
-    fs.readDir(INSTALL_DIR).forEach (name) ->
-      if version = /-([^-]+)$/.exec(name)[1]
-        installed.add version
+plugin = wch.plugin()
 
-exports.add = (root) ->
-  packPath = path.join root, 'package.json'
-  pack = JSON.parse fs.readFile packPath
+coffee = require './coffee'
+coffee.log = plugin.log
 
-  dep = getVersion pack.devDependencies
-  coffee = await loadTranspiler dep.name, dep.version
+plugin.on 'run', ->
+  coffee.init()
 
-  src = path.join root, 'src'
-  dest = path.join root, path.dirname pack.main or 'js/index'
-  stream = wch.stream src,
-    clock: false
+  files = plugin.watch 'src',
     fields: ['name', 'exists', 'new', 'mtime_ms']
     include: ['**/*.coffee']
     exclude: ['__*__']
 
-  stream.on 'data', (file) ->
+  files
+    .filter (file) -> file.exists
+    .read compile
+    .save (file) -> file.dest
+    .then (dest, file) ->
+      wch.emit 'file:build', {file: file.path, dest}
 
-    if file.exists
-      transpile file, getDest(dest, file.name), coffee
-      return
+  files
+    .filter (file) -> !file.exists
+    .delete getDest
+    .then (dest, file) ->
+      wch.emit 'file:delete', {file: file.path, dest}
 
-    # Remove the associated .js file
-    fs.removeFile getDest dest, file.name
-    return
-
-  stream.on 'error', onError
-  streams.set root, stream
+plugin.on 'add', (root) ->
+  root.dest = path.dirname root.main or 'js/index'
+  root.getDest = getDest
+  root.compile = coffee.load root
   return
 
-exports.remove = (root) ->
-  streams.get(root).destroy()
-  streams.delete root
-
-exports.end = ->
-  streams.forEach (stream) ->
-    stream.destroy()
-  streams.clear()
+module.exports = plugin
 
 #
-# Internal
+# Helpers
 #
 
-# Where versions are installed
-INSTALL_DIR = path.join os.homedir(), '.coffee'
+{log} = plugin
 
-# Installed versions
-installed = new Set
+getDest = (file) ->
+  path.join @path, @dest, file.name.replace /\.coffee$/, '.js'
 
-# Loaded transpilers
-loaded = new Map
-
-# Active file streams
-streams = new Map
-
-log = (...args) ->
-  wch.log.coal '[coffee]', ...args
-log.verbose = !!process.env.VERBOSE
-huey.log log, !process.env.NO_COLOR
-
-transpile = (file, dest, coffee) ->
-  try mtime = fs.stat(dest).mtime.getTime()
+compile = (input, file) ->
+  file.dest = @getDest file
+  try mtime = fs.stat(file.dest).mtime.getTime()
   return if mtime and mtime > file.mtime_ms
+
+  if typeof @compile isnt 'function'
+    @compile = await @compile
 
   if log.verbose
     log.pale_yellow 'Transpiling:', file.path
 
-  input = fs.readFile file.path
-  try output = coffee.compile input,
+  try output = @compile input,
     filename: file.path
     header: true
     bare: true
 
   catch err
     loc = err.location
-    wch.emit 'compile:error',
+    wch.emit 'file:error',
       file: file.path
       message: err.message
       location: [
@@ -99,50 +75,3 @@ transpile = (file, dest, coffee) ->
       log.red 'Failed to compile:', file.path
       log.gray err.message
     return
-
-  fs.writeDir path.dirname dest
-  fs.writeFile dest, output
-
-  wch.emit 'compile', {file: file.path, dest}
-  return
-
-getDest = (dir, name) ->
-  path.join dir, name.replace /\.coffee$/, '.js'
-
-getVersion = (deps) ->
-
-  name = 'coffee-script'
-  if version = deps[name]
-    return {name, version}
-
-  name = 'coffeescript'
-  if version = deps[name]
-    return {name, version}
-  return {name, version: '*'}
-
-# Find matching version or install it
-loadTranspiler = (name, version) ->
-  match = semver.maxSatisfying Array.from(installed), version
-  if match # Use an installed version.
-    return coffee if coffee = loaded.get match
-    pack = path.join INSTALL_DIR, name + '-' + match
-    version = match
-
-  else # Install the missing version.
-    url = await tarUrl name, version
-    if url is null
-      return log.pale_red 'Invalid version:', version
-    res = await tarInstall url, INSTALL_DIR
-    pack = res.path
-    installed.add version = /-([^-]+)$/.exec(pack)[1]
-    log.pale_green 'Installed:', name + '@' + version
-
-  log.pale_yellow 'Loading:', pack
-  coffee = require pack
-  loaded.set version, coffee
-  return coffee
-
-onError = (err) ->
-  if log.verbose
-  then log.pale_red err.name + ':', err.message
-  else log err.stack
