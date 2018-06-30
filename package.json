@@ -2,18 +2,19 @@
   "name": "wch-coffee",
   "version": "0.2.0",
   "main": "js/index",
+  "scripts": {
+    "build": "coffee-build src -o js",
+    "prepublishOnly": "prepv -i || true"
+  },
   "dependencies": {
     "fsx": "aleclarson/fsx#1.7.0",
     "semver": "^5.5.0",
     "tar-install": "^0.0.1",
-    "tar-url": "^0.0.2"
+    "tar-url": "^0.0.2",
+    "wch": "^0.8"
   },
   "devDependencies": {
     "coffeescript": "^2.2.3",
-    "wch-coffee": "*"
-  },
-  "scripts": {
-    "build": "coffee-build src -o js",
-    "prepublishOnly": "prepv -i || true"
+    "wch-coffee": "file:."
   }
 }

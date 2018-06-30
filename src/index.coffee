@@ -2,76 +2,92 @@ path = require 'path'
 wch = require 'wch'
 fs = require 'fsx'
 
-plugin = wch.plugin()
-
 coffee = require './coffee'
-coffee.log = plugin.log
 
-plugin.on 'run', ->
+# TODO: Add config method for specifying src/dest paths.
+# TODO: Add config option for copying non-coffee files into dest.
+module.exports = (log) ->
+  debug = log.debug 'wch-coffee'
+
+  coffee.log = log
   coffee.init()
 
-  files = plugin.watch 'src',
-    fields: ['name', 'exists', 'new', 'mtime_ms']
-    include: ['**/*.coffee']
-    exclude: ['__*__']
+  shortPath = (path) ->
+    path.replace process.env.HOME, '~'
 
-  files
-    .filter (file) -> file.exists
+  compile = (input, file) ->
+    try mtime = fs.stat(file.dest).mtime.getTime()
+    return if mtime and mtime > file.mtime_ms
+
+    if typeof @compile isnt 'function'
+      @compile = await @compile
+
+    debug 'Transpiling:', shortPath file.path
+    try @compile input,
+      filename: file.path
+      header: true
+      bare: true
+
+    catch err
+      loc = err.location
+      wch.emit 'file:error',
+        file: file.path
+        message: err.message
+        range: [
+          [loc.first_line, loc.first_column]
+          [loc.last_line or loc.first_line, loc.last_column + 1]
+        ]
+
+      debug log.red('Failed to transpile:'), shortPath file.path
+      return
+
+  build = wch.pipeline()
     .read compile
     .save (file) -> file.dest
-    .then (dest, file) ->
+    .each (dest, file) ->
       wch.emit 'file:build', {file: file.path, dest}
 
-  files
-    .filter (file) -> !file.exists
-    .delete getDest
-    .then (dest, file) ->
+  clear = wch.pipeline()
+    .delete (file) -> file.dest
+    .each (dest, file) ->
       wch.emit 'file:delete', {file: file.path, dest}
 
-plugin.on 'add', (root) ->
-  root.dest = path.dirname root.main or 'js/index'
-  root.getDest = getDest
-  root.compile = coffee.load root
-  return
+  watchOptions =
+    only: ['*.coffee']
+    skip: ['**/__*__/**']
+    fields: ['name', 'exists', 'new', 'mtime_ms']
+    crawl: true
 
-module.exports = plugin
+  attach: (pack) ->
+    pack.sources = []
 
-#
-# Helpers
-#
+    # Wait for the project to be loaded.
+    process.nextTick ->
+      pack.compile = coffee.load pack
 
-{log} = plugin
+      if !pack.sources.length
+        pack.sources.push ['src', path.dirname pack.main or 'js/.']
 
-getDest = (file) ->
-  path.join @path, @dest, file.name.replace /\.coffee$/, '.js'
+      # Create a watch stream for each src->dest pair.
+      pack.sources.forEach ([src, dest]) ->
+        if !fs.isDir path.join(pack.path, src)
+          log.warn 'Directory does not exist:', path.join(pack.path, src)
+          return
 
-compile = (input, file) ->
-  file.dest = @getDest file
-  try mtime = fs.stat(file.dest).mtime.getTime()
-  return if mtime and mtime > file.mtime_ms
+        changes = pack.stream src, watchOptions
+        changes.on 'data', (file) ->
+          return if file.name is '/'
 
-  if typeof @compile isnt 'function'
-    @compile = await @compile
+          file.dest = path.join pack.path, dest,
+            file.name.replace /\.coffee$/, '.js'
 
-  if log.verbose
-    log.pale_yellow 'Transpiling:', file.path
+          action = if file.exists then build else clear
+          action.call(pack, file).catch (err) ->
+            log log.red('Error while processing:'), file.path
+            console.error err.stack
 
-  try output = @compile input,
-    filename: file.path
-    header: true
-    bare: true
+  methods:
 
-  catch err
-    loc = err.location
-    wch.emit 'file:error',
-      file: file.path
-      message: err.message
-      location: [
-        [loc.first_line, loc.first_column]
-        [loc.last_line or loc.first_line, loc.last_column + 1]
-      ]
-
-    if log.verbose
-      log.red 'Failed to compile:', file.path
-      log.gray err.message
-    return
+    compile: (src, dest) ->
+      @sources.push [src, dest]
+      return this

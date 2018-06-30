@@ -2,7 +2,6 @@ tarInstall = require 'tar-install'
 tarUrl = require 'tar-url'
 semver = require 'semver'
 path = require 'path'
-wch = require 'wch'
 fs = require 'fsx'
 os = require 'os'
 
@@ -22,8 +21,8 @@ exports.init = ->
         installed.add version
 
 # Load coffee-script for a package.
-exports.load = (root) ->
-  dep = parseDeps root.devDependencies
+exports.load = (pack) ->
+  dep = parseDeps pack.devDependencies
   version = semver.maxSatisfying Array.from(installed), dep.version
 
   {log} = this
