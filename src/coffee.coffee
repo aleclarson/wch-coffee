@@ -26,6 +26,8 @@ exports.load = (root) ->
   dep = parseDeps root.devDependencies
   version = semver.maxSatisfying Array.from(installed), dep.version
 
+  {log} = this
+
   if version # Use an installed version.
     return compile if compile = loaded[version]
     coffee = path.join INSTALL_DIR, dep.name + '-' + version
@@ -35,14 +37,14 @@ exports.load = (root) ->
     res = await tarInstall url, INSTALL_DIR
     coffee = res.path
     installed.add version = /-([^-]+)$/.exec(coffee)[1]
-    @log.pale_green 'Installed:', dep.name + '@' + version
+    log log.lgreen('Installed:'), dep.name + '@' + version
 
   else # Invalid version!
-    @log.pale_red 'Package error:', root.path
-    @log.pale_red 'Invalid version:', dep.name + '@' + dep.version
+    log log.lred('Package error:'), pack.path
+    log log.lred('Invalid version:'), dep.name + '@' + dep.version
     return
 
-  @log.pale_yellow 'Loading:', coffee
+  log log.lyellow('Loading:'), coffee
   {compile} = require coffee
   loaded[version] = compile
   return compile
