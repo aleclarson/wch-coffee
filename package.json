@@ -1,6 +1,6 @@
 {
   "name": "wch-coffee",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "js/index",
   "scripts": {
     "build": "coffee-build src -o js",
