@@ -8,8 +8,7 @@
     "js"
   ],
   "scripts": {
-    "build": "coffee-build src -o js",
-    "prepublishOnly": "prepv -i || true"
+    "build": "coffee-build src -o js"
   },
   "dependencies": {
     "fsx": "aleclarson/fsx#1.7.0",
