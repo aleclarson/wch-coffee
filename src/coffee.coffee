@@ -17,8 +17,8 @@ loaded = {}
 exports.init = ->
   if fs.isDir INSTALL_DIR
     fs.readDir(INSTALL_DIR).forEach (name) ->
-      if version = /-([^-]+)$/.exec(name)[1]
-        installed.add version
+      if version = /-([^-]+)$/.exec name
+        installed.add version[1]
 
 # Load coffee-script for a package.
 exports.load = (pack) ->
