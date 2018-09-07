@@ -1,6 +1,6 @@
 {
   "name": "wch-coffee",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "js/index",
   "repository": "aleclarson/wch-coffee",
   "description": "CoffeeScript transpiler for wchd",
