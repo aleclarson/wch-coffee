@@ -7,8 +7,6 @@ coffee = require './coffee'
 # TODO: Add config method for specifying src/dest paths.
 # TODO: Add config option for copying non-coffee files into dest.
 module.exports = (log) ->
-  debug = log.debug 'wch-coffee'
-
   coffee.log = log
   coffee.init()
 
@@ -22,7 +20,7 @@ module.exports = (log) ->
     if typeof @compile isnt 'function'
       @compile = await @compile
 
-    debug 'Transpiling:', shortPath file.path
+    log 'Transpiling:', shortPath file.path
     try @compile input,
       filename: file.path
       header: true
@@ -38,7 +36,7 @@ module.exports = (log) ->
           [loc.last_line or loc.first_line, loc.last_column + 1]
         ]
 
-      debug log.red('Failed to transpile:'), shortPath file.path
+      log log.red('Failed to transpile:'), shortPath file.path
       return
 
   build = wch.pipeline()
