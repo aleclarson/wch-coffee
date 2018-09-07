@@ -9,7 +9,7 @@
   "dependencies": {
     "fsx": "aleclarson/fsx#1.7.0",
     "semver": "^5.5.0",
-    "tar-install": "^0.0.1",
+    "tar-install": "^0.1.0",
     "tar-url": "^0.0.2",
     "wch": "^0.8"
   },
