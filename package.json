@@ -14,11 +14,13 @@
     "fsx": "aleclarson/fsx#1.7.0",
     "semver": "^5.5.0",
     "tar-install": "^0.1.0",
-    "tar-url": "^0.0.2",
-    "wch": "^0.8"
+    "tar-url": "^0.0.2"
   },
   "devDependencies": {
     "coffeescript": "^2.2.3",
     "wch-coffee": "file:."
+  },
+  "peerDependencies": {
+    "wch": "^0.10.0"
   }
 }
