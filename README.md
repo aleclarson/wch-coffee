@@ -1,4 +1,4 @@
-# wch-coffee v0.3.1
+# wch-coffee v0.3.2
 
 CoffeeScript transpiler for [wchd](https://npmjs.org/package/wchd)
 
